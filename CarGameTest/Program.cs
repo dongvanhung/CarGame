@@ -11,20 +11,25 @@ namespace CarGameTest
     {
         static void Main(string[] args)
         {
-            ListOfCars cars = new ListOfCars();
-            Random rand = new Random();
-            for (int i = 0; i++ < 10;)
-            {
-                cars.Cars.Add(new Car(Guid.NewGuid().ToString(), (DriveTrainType)(rand.Next(0,3)),rand.Next(1000,2000)));
-            }
-            foreach (Car c in cars.Cars) Console.WriteLine("Name: {0}\tDriveTrain: {1}\tMass:{2}", c.Name, c.GetDriveTrainAsString(), c.GetMassAsString());
+            Car c = new Car();
+            //for(int i=50;i<7496;i+=96)
+            //Console.WriteLine("Rpm: {0}\tkWatt: {1}",i,c.engine.GetPowerWatt(i)/1000);
+            c.engine.currentRPM = 7000;
+            Console.WriteLine("Speed: {0}", c.GetSpeed());
+            //ListOfCars cars = new ListOfCars();
+            //Random rand = new Random();
+            //for (int i = 0; i++ < 10;)
+            //{
+            //    cars.Cars.Add(new Car(Guid.NewGuid().ToString(), (DriveTrainType)(rand.Next(0,3)),rand.Next(1000,2000)));
+            //}
+            ////foreach (Car c in cars.Cars) Console.WriteLine("Name: {0}\tDriveTrain: {1}\tMass:{2}\tMaxRPM:{3}", c.Name, c.GetDriveTrainAsString(), c.GetMassAsString(),c.engine.maxRPM);
 
 
 
-            CarTools.SaveCarsXml("test.xml", cars);
-            ListOfCars newCars;
-            newCars = CarTools.LoadCarsXml("test.xml");
-            foreach (Car c in newCars.Cars) Console.WriteLine("Name: {0}\tDriveTrain: {1}\tMass:{2}",c.Name,c.GetDriveTrainAsString(),c.GetMassAsString());
+            //CarTools.SaveCarsXml("test.xml", cars);
+            //ListOfCars newCars;
+            //newCars = CarTools.LoadCarsXml("test.xml");
+            //foreach (Car c in newCars.Cars) Console.WriteLine("Name: {0}\tDriveTrain: {1}\tMass:{2}",c.Name,c.GetDriveTrainAsString(),c.GetMassAsString());
             Console.ReadLine();
         }
 
