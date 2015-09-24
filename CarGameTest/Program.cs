@@ -11,14 +11,20 @@ namespace CarGameTest
     {
         static void Main(string[] args)
         {
-            Car c = new Car();
-            c.Name = "Volvo";
-            c.ChangeDriveTrain(DriveTrainType.AllWheelDrive);
-            PrintCarInfo(c);
-            CarTools.SaveCarXml("test.xml", c);
-            c = null;
-            c = CarTools.LoadCarXml("test.xml");
-            PrintCarInfo(c);
+            ListOfCars cars = new ListOfCars();
+            Random rand = new Random();
+            for (int i = 0; i++ < 10;)
+            {
+                cars.Cars.Add(new Car(Guid.NewGuid().ToString(), (DriveTrainType)(rand.Next(0,3)),rand.Next(1000,2000)));
+            }
+            foreach (Car c in cars.Cars) Console.WriteLine("Name: {0}\tDriveTrain: {1}\tMass:{2}", c.Name, c.GetDriveTrainAsString(), c.GetMassAsString());
+
+
+
+            CarTools.SaveCarsXml("test.xml", cars);
+            ListOfCars newCars;
+            newCars = CarTools.LoadCarsXml("test.xml");
+            foreach (Car c in newCars.Cars) Console.WriteLine("Name: {0}\tDriveTrain: {1}\tMass:{2}",c.Name,c.GetDriveTrainAsString(),c.GetMassAsString());
             Console.ReadLine();
         }
 

@@ -10,22 +10,22 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace CarGameEngine
 {
-    [DataContract(Name="DriveTrain")]
+    [DataContract(Name = "DriveTrain")]
     public enum DriveTrainType
     {
         [EnumMember]
         FrontWheelDrive = 0,
         [EnumMember]
-        RearWheelDrive=1,
+        RearWheelDrive = 1,
         [EnumMember]
-        AllWheelDrive=2
+        AllWheelDrive = 2
     };
 
-    public static class CarTools 
+    public static class CarTools
     {
         public static void SaveCarXml(string filename, Car carToSave)
         {
-            Stream stream = File.Open(filename, FileMode.Create);
+            Stream stream = File.Open(filename, FileMode.Append);
             DataContractSerializer ser =
                 new DataContractSerializer(typeof(Car));
             ser.WriteObject(stream, carToSave);
@@ -40,14 +40,39 @@ namespace CarGameEngine
             stream.Close();
             return carToLoad;
         }
+        public static void SaveCarsXml(string filename, ListOfCars carsToSave)
+        {
+            Stream stream = File.Open(filename, FileMode.Create);
+            DataContractSerializer ser =
+                new DataContractSerializer(typeof(ListOfCars));
+            ser.WriteObject(stream, carsToSave);
+            stream.Close();
+        }
+        public static ListOfCars LoadCarsXml(string filename)
+        {
+            Stream stream = File.Open(filename, FileMode.Open);
+            DataContractSerializer ser =
+                new DataContractSerializer(typeof(ListOfCars));
+            ListOfCars listOfCars = new ListOfCars();
+            listOfCars = (ListOfCars)ser.ReadObject(stream);
+
+            stream.Close();
+            return listOfCars;
+        }
 
 
+    }
+    [DataContract]
+    public class ListOfCars
+    {
+        [DataMember]
+        public List<Car> Cars = new List<Car>();
     }
 
     [DataContract]
     public class Car : AerodynamicShape
     {
-       [DataMember]
+        [DataMember]
         private DriveTrainType _driveTrain;
         [DataMember]
         private Engine _engine;
@@ -85,6 +110,15 @@ namespace CarGameEngine
 
 
         }
+        public Car(string Name,DriveTrainType DriveTrain,Int32 Mass)
+        {
+            _engine = new Engine();
+            _driveTrain = DriveTrain;
+            _name = Name;
+            base.Mass = Mass;
+
+
+        }
         public float GetDrag(float Speed)
         {
             return base.GetDragForce(Speed);
@@ -92,6 +126,14 @@ namespace CarGameEngine
         public void ChangeDriveTrain(DriveTrainType driveTrain)
         {
             _driveTrain = driveTrain;
+        }
+        public string GetDriveTrainAsString()
+        {
+            return _driveTrain.ToString();
+        }
+        public string GetMassAsString()
+        {
+            return base.Mass.ToString();
         }
     }
     [DataContract]
