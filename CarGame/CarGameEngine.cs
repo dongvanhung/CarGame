@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.ComponentModel;
 
 
 namespace CarGameEngine
@@ -174,9 +175,11 @@ namespace CarGameEngine
             var appliedForce = engine.GetTorqueNm() * _driveTrain.GetTotalGearRatio() / wheel.Radius;
             float netForce;
             if (_currentSpeed > 0)
-                netForce = appliedForce - GetDragForce(GetSpeed()) - GetRollingResistance()-brakePosition*50;
+                netForce = appliedForce - GetDragForce(GetSpeed()) - GetRollingResistance() - brakePosition * 50;
             else
                 netForce = appliedForce - GetDragForce(GetSpeed());
+
+#warning "Not correct. Divides time by 400f. should be 1000f(1 Second = 1000 ms"
             var acceleration = netForce / base.Mass * (deltaTime / 400f);
             _currentSpeed = GetSpeed() + (float)acceleration / wheel.Radius;
             var wheelRPM = (_currentSpeed / (wheel.Radius * 2 * Math.PI) * 1000 / 60);
@@ -198,7 +201,7 @@ namespace CarGameEngine
         {
             return base.GetDragForce(Speed);
         }
-        public float GetRollingResistance()
+        public new float GetRollingResistance()
         {
             return base.GetRollingResistance();
         }
@@ -247,8 +250,8 @@ namespace CarGameEngine
     {
         [DataMember]
         private float _finalGearRatio = 3.42f;
-        [DataMember]
-        private GearBoxType _gearBoxType = GearBoxType.Manual;
+        //[DataMember]
+        //private GearBoxType _gearBoxType = GearBoxType.Manual;
         [DataMember]
         private Dictionary<Int32, float> _gearBoxRatios = new Dictionary<int, float> { { 0, 0f }, { 1, 2.97f }, { 2, 2.07f }, { 3, 1.43f }, { 4, 1f }, { 5, 0.84f }, { 6, 0.56f }, { 7, -3.38f } };
         public Int32 currentGear = 1;
