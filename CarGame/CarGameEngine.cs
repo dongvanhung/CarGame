@@ -83,6 +83,7 @@ namespace CarGameEngine
     [DataContract]
     public class Car : AerodynamicShape
     {
+        private int _throttlePosition = 0;
         [DataMember]
         private DriveTrainType _driveTrainType;
         [DataMember]
@@ -115,7 +116,20 @@ namespace CarGameEngine
                 return _engine;
             }
         }
-
+        public Int32 Throttle
+        {
+            get
+            {
+                return _throttlePosition;
+            }
+            set
+            {
+                if (value >= 0 && value <= 100)
+                    _throttlePosition = value;
+                else
+                    _throttlePosition = 0;
+            }
+        }
         public Car()
         {
             _engine = new Engine();
@@ -133,11 +147,18 @@ namespace CarGameEngine
 
 
         }
-        public float GetAcceleration(float DeltaTime)
+
+        
+        public void Calculate(long deltaTime)
         {
-           var appliedForce = engine.GetTorqueNm(engine.currentRPM)*_driveTrain.GetTotalGearRatio()/wheel.Radius;
-            var netForce = appliedForce - GetDragForce(GetSpeed())-GetRollingResistance();
-            return netForce/base.Mass*DeltaTime;
+           
+            var appliedForce = engine.GetTorqueNm(engine.currentRPM) * ((float)_throttlePosition/100f) * _driveTrain.GetTotalGearRatio() / wheel.Radius;
+            var netForce = appliedForce - GetDragForce(GetSpeed()) - base.GetRollingResistance();
+            var acceleration = netForce / base.Mass * deltaTime;
+            var newSpeed = GetSpeed() + acceleration / wheel.Radius;
+            var wheelRPM = (newSpeed /(wheel.Radius*2*Math.PI)*1000/60);
+            var newRPM = wheelRPM*_driveTrain.GetTotalGearRatio();
+            engine.currentRPM = (int)newRPM;
         }
         public float GetSpeed()
         {
@@ -145,31 +166,40 @@ namespace CarGameEngine
             var wheelRPM = engine.currentRPM / _driveTrain.GetTotalGearRatio();
             return (wheelRPM*wheel.Radius*2*(float)Math.PI)*60/1000;
         }
-        public float GetDrag(float Speed)
+        public float GetDragResistance(float Speed)
         {
             return base.GetDragForce(Speed);
         }
-        public float GetRoll()
+        public float GetRollingResistance()
         {
             return base.GetRollingResistance();
         }
-        public void ChangeDriveTrain(DriveTrainType driveTrain)
+
+        public void GearUp()
         {
-            _driveTrainType = driveTrain;
+            var speed = GetSpeed();
+            if(_driveTrain.currentGear<6)
+                _driveTrain.currentGear++;
+            var wheelRPM = (speed / (wheel.Radius * 2 * Math.PI) * 1000 / 60);
+            engine.currentRPM = (int)(wheelRPM * _driveTrain.GetTotalGearRatio());
+
         }
-        public string GetDriveTrainAsString()
+        public void GearDown()
         {
-            return _driveTrainType.ToString();
+            var speed = GetSpeed();
+            if (_driveTrain.currentGear >0 )
+                _driveTrain.currentGear--;
+            var wheelRPM = (speed / (wheel.Radius * 2 * Math.PI) * 1000 / 60);
+            engine.currentRPM = (int)(wheelRPM * _driveTrain.GetTotalGearRatio());
+
         }
-        public string GetMassAsString()
-        {
-            return base.Mass.ToString();
-        }
+
 
     }
     [DataContract]
     public class Wheel
     {
+        [DataMember]
         private float _radius = 0.37f;
         public float Radius
         {
@@ -182,10 +212,13 @@ namespace CarGameEngine
     [DataContract]
     public class DriveTrain
     {
+        [DataMember]
         private float _finalGearRatio = 3.42f;
+        [DataMember]
         private GearBoxType _gearBoxType = GearBoxType.Manual;
+        [DataMember]
         private Dictionary<Int32, float> _gearBoxRatios = new Dictionary<int, float>{ { 0, 0f }, { 1, 2.97f }, { 2, 2.07f }, { 3, 1.43f }, { 4, 1f }, { 5, 0.84f }, { 6, 0.56f }, { 7, -3.38f } };
-        public Int32 currentGear = 6;
+        public Int32 currentGear = 1;
         public float GetTotalGearRatio(){
             
             return _finalGearRatio * _gearBoxRatios[_gearBoxRatios.Keys.FirstOrDefault(k => k == currentGear)];
@@ -199,6 +232,7 @@ namespace CarGameEngine
         private const float _airDensity = 1.2f;
         private const Int32 _metersPerKiloMeter = 1000;
         private const Int32 _secondsPerHour = 3600;
+        [DataMember]
         private float _frontalArea = 1.94f;
         private const Int32 _maxMass = 5000;
         private const float _gravityConstant = 9.81f;
@@ -236,7 +270,9 @@ namespace CarGameEngine
             }
             set
             {
-                _currentRPM = value;
+                if (value >= 850)
+                    _currentRPM = value;
+                else _currentRPM = 850;
             }
         }
 
