@@ -14,11 +14,11 @@ namespace CarGameTest
             bool exit = false;
             int cnt = 2;
             Car c = new Car("Volvo", DriveTrainType.RearWheelDrive, 1000);
-            c.Throttle = 100;
+            c.engine.throttlePosition = 100;
             
             while (!exit)
             {
-                c.Calculate(1);
+                c.Calculate(1000);
                 Console.Clear();
                 Console.SetCursorPosition(0, 10);
                 Console.Write("Speed: {0}\nRpm: {1}\nTime: {2}s", c.GetSpeed(), c.engine.currentRPM,cnt++);

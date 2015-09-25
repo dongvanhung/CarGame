@@ -80,10 +80,13 @@ namespace CarGameEngine
         public List<Car> Cars = new List<Car>();
     }
 
+
+    /// <summary>
+    /// Describes a Car with engine, drivetrain, wheel inherited from AerodynamicShape
+    /// </summary>
     [DataContract]
     public class Car : AerodynamicShape
     {
-        private int _throttlePosition = 0;
         [DataMember]
         private DriveTrainType _driveTrainType;
         [DataMember]
@@ -94,7 +97,27 @@ namespace CarGameEngine
         private DriveTrain _driveTrain = new DriveTrain();
         [DataMember]
         private Wheel wheel = new Wheel();
+        private float _currentSpeed = 0;
+        private Int32 _brakePosition = 0;
 
+        public Int32 brakePosition
+        {
+            get { return _brakePosition; }
+            set
+            {
+                if (value < 0)
+                    _brakePosition = 0;
+                else if (value > 100) _brakePosition = 100;
+                else _brakePosition = value;
+            }
+        }
+        public Int32 Gear
+        {
+            get
+            {
+                return _driveTrain.currentGear;
+            }
+        }
         public string Name
         {
             get
@@ -116,20 +139,6 @@ namespace CarGameEngine
                 return _engine;
             }
         }
-        public Int32 Throttle
-        {
-            get
-            {
-                return _throttlePosition;
-            }
-            set
-            {
-                if (value >= 0 && value <= 100)
-                    _throttlePosition = value;
-                else
-                    _throttlePosition = 0;
-            }
-        }
         public Car()
         {
             _engine = new Engine();
@@ -138,6 +147,12 @@ namespace CarGameEngine
 
 
         }
+        /// <summary>
+        /// Returns a new Car class.
+        /// </summary>
+        /// <param name="Name">Name of the Car</param>
+        /// <param name="DriveTrain">DriveTrain </param>
+        /// <param name="Mass">Mass of car in Kg</param>
         public Car(string Name, DriveTrainType DriveTrain, Int32 Mass)
         {
             _engine = new Engine();
@@ -148,23 +163,36 @@ namespace CarGameEngine
 
         }
 
-        
-        public void Calculate(long deltaTime)
+        /// <summary>
+        /// Calculates Forces on the car and updates the rpm of the engine
+        /// based on the information stored in the car class.
+        /// </summary>
+        /// <param name="deltaTime">Time in Milliseconds to use in the calculations.</param>
+        public void Calculate(double deltaTime)
         {
-           
-            var appliedForce = engine.GetTorqueNm(engine.currentRPM) * ((float)_throttlePosition/100f) * _driveTrain.GetTotalGearRatio() / wheel.Radius;
-            var netForce = appliedForce - GetDragForce(GetSpeed()) - base.GetRollingResistance();
-            var acceleration = netForce / base.Mass * deltaTime;
-            var newSpeed = GetSpeed() + acceleration / wheel.Radius;
-            var wheelRPM = (newSpeed /(wheel.Radius*2*Math.PI)*1000/60);
-            var newRPM = wheelRPM*_driveTrain.GetTotalGearRatio();
+
+            var appliedForce = engine.GetTorqueNm() * _driveTrain.GetTotalGearRatio() / wheel.Radius;
+            float netForce;
+            if (_currentSpeed > 0)
+                netForce = appliedForce - GetDragForce(GetSpeed()) - GetRollingResistance()-brakePosition*50;
+            else
+                netForce = appliedForce - GetDragForce(GetSpeed());
+            var acceleration = netForce / base.Mass * (deltaTime / 400f);
+            _currentSpeed = GetSpeed() + (float)acceleration / wheel.Radius;
+            var wheelRPM = (_currentSpeed / (wheel.Radius * 2 * Math.PI) * 1000 / 60);
+            var newRPM = wheelRPM * _driveTrain.GetTotalGearRatio();
             engine.currentRPM = (int)newRPM;
         }
+        /// <summary>
+        /// Returns the speed in Km/h based on current rpm of engine and drivetrain gear ratio with current gear.
+        /// </summary>
+        /// <returns></returns>
         public float GetSpeed()
         {
-            var t = _driveTrain.GetTotalGearRatio();
-            var wheelRPM = engine.currentRPM / _driveTrain.GetTotalGearRatio();
-            return (wheelRPM*wheel.Radius*2*(float)Math.PI)*60/1000;
+            return _currentSpeed;
+            //var t = _driveTrain.GetTotalGearRatio();
+            //var wheelRPM = engine.currentRPM / _driveTrain.GetTotalGearRatio();
+            //return (wheelRPM*wheel.Radius*2*(float)Math.PI)*60/1000;
         }
         public float GetDragResistance(float Speed)
         {
@@ -174,20 +202,25 @@ namespace CarGameEngine
         {
             return base.GetRollingResistance();
         }
-
+        /// <summary>
+        /// Puts in the next gear of the transmission.
+        /// </summary>
         public void GearUp()
         {
             var speed = GetSpeed();
-            if(_driveTrain.currentGear<6)
+            if (_driveTrain.currentGear < 6)
                 _driveTrain.currentGear++;
             var wheelRPM = (speed / (wheel.Radius * 2 * Math.PI) * 1000 / 60);
             engine.currentRPM = (int)(wheelRPM * _driveTrain.GetTotalGearRatio());
 
         }
+        /// <summary>
+        /// Puts in the previous gear of the transmission.
+        /// </summary>
         public void GearDown()
         {
             var speed = GetSpeed();
-            if (_driveTrain.currentGear >0 )
+            if (_driveTrain.currentGear - 1 > 0)
                 _driveTrain.currentGear--;
             var wheelRPM = (speed / (wheel.Radius * 2 * Math.PI) * 1000 / 60);
             engine.currentRPM = (int)(wheelRPM * _driveTrain.GetTotalGearRatio());
@@ -217,10 +250,11 @@ namespace CarGameEngine
         [DataMember]
         private GearBoxType _gearBoxType = GearBoxType.Manual;
         [DataMember]
-        private Dictionary<Int32, float> _gearBoxRatios = new Dictionary<int, float>{ { 0, 0f }, { 1, 2.97f }, { 2, 2.07f }, { 3, 1.43f }, { 4, 1f }, { 5, 0.84f }, { 6, 0.56f }, { 7, -3.38f } };
+        private Dictionary<Int32, float> _gearBoxRatios = new Dictionary<int, float> { { 0, 0f }, { 1, 2.97f }, { 2, 2.07f }, { 3, 1.43f }, { 4, 1f }, { 5, 0.84f }, { 6, 0.56f }, { 7, -3.38f } };
         public Int32 currentGear = 1;
-        public float GetTotalGearRatio(){
-            
+        public float GetTotalGearRatio()
+        {
+
             return _finalGearRatio * _gearBoxRatios[_gearBoxRatios.Keys.FirstOrDefault(k => k == currentGear)];
         }
     }
@@ -261,7 +295,34 @@ namespace CarGameEngine
     {
         [DataMember]
         private Dictionary<Int32, Int32> _torqueCurve;
-        private Int32 _currentRPM=850;
+        private Int32 _currentRPM = 850;
+        private Int32 _throttlePosition;
+        public Int32 throttlePosition
+        {
+            get
+            {
+                return _throttlePosition;
+            }
+            set
+            {
+                if (value > 100)
+                    _throttlePosition = 100;
+                else if (value < 0)
+                    _throttlePosition = 0;
+                else
+                    _throttlePosition = value;
+            }
+        }
+        public float Clutch
+        {
+            get
+            {
+                if (_currentRPM < 900)
+                    return 0;
+                else
+                    return 1;
+            }
+        }
         public Int32 currentRPM
         {
             get
@@ -312,39 +373,61 @@ namespace CarGameEngine
 
 
         }
+        /// <summary>
+        /// Returns max torque of engine at rpm in Nm.
+        /// Only works if value of exact rpm is stored in _torqueCurve
+        /// </summary>
+        /// <param name="rpm">Rpm to return Torque of.</param>
+        /// <returns></returns>
         public Int32 GetTorqueNmFast(Int32 rpm)
         {
             var index = rpm / 500;
             if (index >= 0 && index < _torqueCurve.Count)
             {
-                return _torqueCurve[index];
+                return _torqueCurve[index] * (_throttlePosition / 100);
             }
             else return 0;
         }
-        public float GetTorqueNm(Int32 rpm)
+        /// <summary>
+        /// Returns max torque of engine att rpm.
+        /// Interpolates if exact value is not found.
+        /// </summary>
+        /// <param name="rpm">Rpm to return Torque of.</param>
+        /// <returns></returns>
+        public float GetTorqueNm()
         {
-            var firstKey = _torqueCurve.Keys.LastOrDefault(k => k < rpm);
-            var secondKey = _torqueCurve.Keys.FirstOrDefault(k => k > rpm);
+            var firstKey = _torqueCurve.Keys.LastOrDefault(k => k < _currentRPM);
+            var secondKey = _torqueCurve.Keys.FirstOrDefault(k => k > _currentRPM);
 
-            if (rpm <= firstKey) return _torqueCurve[firstKey];
-            if (rpm >= secondKey) return _torqueCurve[secondKey];
+            if (_currentRPM <= firstKey) return _torqueCurve[firstKey];
+            if (_currentRPM >= secondKey) return _torqueCurve[secondKey];
 
             var firstTorque = _torqueCurve[firstKey];
             var secondTorque = _torqueCurve[secondKey];
             float difference = secondTorque - firstTorque;
-            float weight =  (float)(rpm - firstKey)/(float)(secondKey - firstKey);
-            
-            return (float)firstTorque+difference*weight;
+            float weight = (float)(_currentRPM - firstKey) / (float)(secondKey - firstKey);
+
+            return ((float)firstTorque + difference * weight) * ((float)_throttlePosition / 100f);
         }
-        public Int32 GetPowerWatt(Int32 rpm)
+        /// <summary>
+        /// Returns max Power in Watts at rpm
+        /// </summary>
+        /// <param name="rpm">Rpm</param>
+        /// <returns></returns>
+        public Int32 GetPowerWatt()
         {
-            var torque = GetTorqueNm(rpm);
-            return (int)Math.Round(rpm / 60 * 2 * Math.PI * torque);
+            var torque = GetTorqueNm();
+            return (int)Math.Round(_currentRPM / 60 * 2 * Math.PI * torque);
 
         }
-        public Int32 GetPowerHP(Int32 rpm)
+        /// <summary>
+        /// Returns max Power in HP at rpm
+        /// </summary>
+        /// <param name="rpm"></param>
+        /// <returns></returns>
+        public Int32 GetPowerHP()
         {
-            var watt = GetPowerWatt(rpm);
+            var watt = GetPowerWatt();
             return (int)Math.Round(watt / 745.699872f);
         }
     }
