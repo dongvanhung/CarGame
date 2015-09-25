@@ -164,6 +164,19 @@ namespace CarGameEngine
 
         }
 
+        public float getForceOnCarX(double deltaTime)
+        {
+            var appliedForce = engine.GetTorqueNm() * _driveTrain.GetTotalGearRatio() / wheel.Radius;
+            float netForce;
+            if (_currentSpeed >= 0)
+                netForce = appliedForce - GetDragForce(GetSpeed()) - GetRollingResistance() - brakePosition * 50;
+            else
+                netForce = appliedForce + GetDragForce(GetSpeed()) + GetRollingResistance() + brakePosition * 50;
+
+#warning "Not correct. Divides time by 400f. should be 1000f(1 Second = 1000 ms"
+            return netForce / (float)(base.Mass * (deltaTime / 400f));
+        }
+
         /// <summary>
         /// Calculates Forces on the car and updates the rpm of the engine
         /// based on the information stored in the car class.
@@ -171,13 +184,19 @@ namespace CarGameEngine
         /// <param name="deltaTime">Time in Milliseconds to use in the calculations.</param>
         public void Calculate(double deltaTime)
         {
+            CalculateAccel(deltaTime);
+            CalculateGravity(deltaTime);
+
+        }
+        private void CalculateAccel(double deltaTime)
+        {
 
             var appliedForce = engine.GetTorqueNm() * _driveTrain.GetTotalGearRatio() / wheel.Radius;
             float netForce;
-            if (_currentSpeed > 0)
+            if (_currentSpeed >= 0)
                 netForce = appliedForce - GetDragForce(GetSpeed()) - GetRollingResistance() - brakePosition * 50;
             else
-                netForce = appliedForce - GetDragForce(GetSpeed());
+                netForce = appliedForce + GetDragForce(GetSpeed()) + GetRollingResistance() + brakePosition * 50;
 
 #warning "Not correct. Divides time by 400f. should be 1000f(1 Second = 1000 ms"
             var acceleration = netForce / base.Mass * (deltaTime / 400f);
@@ -185,6 +204,10 @@ namespace CarGameEngine
             var wheelRPM = (_currentSpeed / (wheel.Radius * 2 * Math.PI) * 1000 / 60);
             var newRPM = wheelRPM * _driveTrain.GetTotalGearRatio();
             engine.currentRPM = (int)newRPM;
+        }
+        private void CalculateGravity(double deltaTime)
+        {
+
         }
         /// <summary>
         /// Returns the speed in Km/h based on current rpm of engine and drivetrain gear ratio with current gear.
@@ -228,6 +251,13 @@ namespace CarGameEngine
             var wheelRPM = (speed / (wheel.Radius * 2 * Math.PI) * 1000 / 60);
             engine.currentRPM = (int)(wheelRPM * _driveTrain.GetTotalGearRatio());
 
+        }
+        public void GearReverse(bool reverse)
+        {
+            if (reverse)
+                _driveTrain.currentGear = 7;
+            else
+                _driveTrain.currentGear = 1;
         }
 
 
@@ -356,8 +386,7 @@ namespace CarGameEngine
         public Engine()
         {
             _torqueCurve = new Dictionary<Int32, Int32>{
-                { 0, 0 },
-                { 500, 80 },
+                   { 500, 80 },
                 {1000, 190 },
                 {1500, 210 },
                 {2000, 225 },
@@ -371,7 +400,6 @@ namespace CarGameEngine
                 {6000, 180 },
                 {6500, 120 },
                 {7000, 80 },
-                {7500, 0 }
             };
 
 
