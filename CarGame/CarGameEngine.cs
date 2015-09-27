@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using System.ComponentModel;
 
 namespace CarGameEngine
 {
+    
     [DataContract(Name = "DriveTrainType")]
     public enum DriveTrainType
     {
@@ -35,6 +37,7 @@ namespace CarGameEngine
 
     public static class CarTools
     {
+        
         public static void SaveCarXml(string filename, Car carToSave)
         {
             Stream stream = File.Open(filename, FileMode.Append);
@@ -70,6 +73,36 @@ namespace CarGameEngine
 
             stream.Close();
             return listOfCars;
+        }
+        public static void SaveCarXml(Stream stream, Car carToSave)
+        {
+            DataContractSerializer ser =
+                new DataContractSerializer(typeof(Car));
+            ser.WriteObject(stream, carToSave);   
+        }
+        public static Car LoadCarXml(Stream stream)
+        {
+            DataContractSerializer ser =
+                new DataContractSerializer(typeof(Car));
+            Car carToLoad = (Car)ser.ReadObject(stream);
+            return carToLoad;
+        }
+        public static void SaveCarZip(string filename,Car carToSave)
+        {
+            Stream fileStream = File.Open(filename, FileMode.Create);
+            GZipStream zipStream = new GZipStream(fileStream, CompressionMode.Compress);
+            SaveCarXml(zipStream, carToSave);
+            zipStream.Close();
+            fileStream.Close();
+        }
+        public static Car LoadCarZip(string filename)
+        {
+            Stream fileStream = File.Open(filename, FileMode.Open);
+            GZipStream zipStream = new GZipStream(fileStream, CompressionMode.Decompress);
+            Car carToLoad = LoadCarXml(zipStream);
+            zipStream.Close();
+            fileStream.Close();
+            return carToLoad;
         }
 
 
@@ -194,12 +227,12 @@ namespace CarGameEngine
             var appliedForce = engine.GetTorqueNm() * _driveTrain.GetTotalGearRatio() / wheel.Radius;
             float netForce;
             if (_currentSpeed >= 0)
-                netForce = appliedForce - GetDragForce(GetSpeed()) - GetRollingResistance() - brakePosition * 50;
+                netForce = appliedForce - GetDragForce(GetSpeed()) - GetRollingResistance() - brakePosition * 70;
             else
-                netForce = appliedForce + GetDragForce(GetSpeed()) + GetRollingResistance() + brakePosition * 50;
+                netForce = appliedForce + GetDragForce(GetSpeed()) + GetRollingResistance() + brakePosition * 70;
 
 #warning "Not correct. Divides time by 400f. should be 1000f(1 Second = 1000 ms"
-            var acceleration = netForce / base.Mass * (deltaTime / 400f);
+            var acceleration = netForce / base.Mass * (deltaTime /400f);
             _currentSpeed = GetSpeed() + (float)acceleration / wheel.Radius;
             var wheelRPM = (_currentSpeed / (wheel.Radius * 2 * Math.PI) * 1000 / 60);
             var newRPM = wheelRPM * _driveTrain.GetTotalGearRatio();
@@ -327,7 +360,7 @@ namespace CarGameEngine
     public class Engine
     {
         [DataMember]
-        private Dictionary<Int32, Int32> _torqueCurve;
+        public Dictionary<Int32, Int32> _torqueCurve;
         private Int32 _currentRPM = 850;
         private Int32 _throttlePosition;
         public Int32 throttlePosition
@@ -386,20 +419,25 @@ namespace CarGameEngine
         public Engine()
         {
             _torqueCurve = new Dictionary<Int32, Int32>{
-                   { 500, 80 },
-                {1000, 190 },
-                {1500, 210 },
-                {2000, 225 },
-                {2500, 230 },
-                {3000, 235 },
-                {3500, 238 },
-                {4000, 235 },
-                {4500, 230 },
-                {5000, 221 },
-                {5500, 200 },
-                {6000, 180 },
-                {6500, 120 },
-                {7000, 80 },
+                {0,30 },
+                {500, 80 },
+                {1000, 250 },
+                {1500, 350 },
+                {2000, 600 },
+                {2500, 1200 },
+                {3000, 1600 },
+                {3500, 1600 },
+                {4000, 1600 },
+                {4500, 1600 },
+                {5000, 1600 },
+                {5500, 1600 },
+                {6000, 1400 },
+                {6500, 1200 },
+                {7000, 900 },
+                {7500,700 },
+                {8000,400 },
+                {8500,200 },
+                {9000,0 }
             };
 
 
